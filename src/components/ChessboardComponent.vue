@@ -2,12 +2,12 @@
   <TheChessboard :board-config="boardConfig"/>
 </template>
 
-<script setup>
-import { TheChessboard } from 'vue3-chessboard';
+<script setup lang="ts">
+import { TheChessboard, type BoardConfig } from 'vue3-chessboard';
 import 'vue3-chessboard/style.css';
 
 
-const boardConfig = {
+const boardConfig: BoardConfig = {
   fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', // the position to start from as a string
   orientation: 'white', // the orientation of the board
   turnColor: 'white', // the color which starts the game
