@@ -13,7 +13,7 @@
 
   <button
       @click="clearDatabase">
-    Clear database
+    Clear database!
   </button>
 
 </template>
@@ -34,6 +34,7 @@ function handleMove(moveEvent: MoveEvent) {
   const game: GameStorageValues = GameStorageHandler.getCurrentGame();
 
   if (isCorrectMove(game, moveEvent)) {
+    boardAPI?.hideMoves();
     if (isComputerMove(game.currentMove)) {
       game.currentMove += 1;
       game.fen = boardAPI?.getFen() || '';
