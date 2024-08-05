@@ -1,86 +1,112 @@
 <template>
-  <TheChessboard :board-config="boardConfig"/>
+  <TheChessboard :board-config="boardConfig" reactive-config @board-created="initializeBoard" @move="handleMove"/>
+
+  <button
+      @click="nextGame">
+    Next Game!
+  </button>
+
+  <button
+      @click="hint">
+    Hint
+  </button>
+
+  <button
+      @click="clearDatabase">
+    Clear database
+  </button>
+
 </template>
 
+
 <script setup lang="ts">
-import { TheChessboard, type BoardConfig } from 'vue3-chessboard';
+import {TheChessboard, BoardApi, MoveEvent} from 'vue3-chessboard';
 import 'vue3-chessboard/style.css';
+import {GameStorageHandler} from '../utils/GameStorageHandler';
+import {GameStorageValues} from '@/types/localStorageTypes';
+import {onMounted} from "vue";
+import type {Square} from "chess.js";
+import {boardConfig} from "@/config/boardConfig";
 
+let boardAPI: BoardApi | undefined;
 
-const boardConfig: BoardConfig = {
-  fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', // the position to start from as a string
-  orientation: 'white', // the orientation of the board
-  turnColor: 'white', // the color which starts the game
-  coordinates: true, // enable or disable board coordinates
-  autoCastle: true, // simplify castling move
-  viewOnly: false, // allow or disallow moves on the board
-  disableContextMenu: false, // enable/ disable the context menu
-  addPieceZIndex: false,
-  blockTouchScroll: false,
-  highlight: {
-    lastMove: true, // highlight the last move on the board
-    check: true, // highlight king in check
-  },
-  animation: { // modify piece animations
-    enabled: true,
-    duration: 200,
-  },
-  lastMove: undefined, // this should not be modified
-  movable: {
-    free: false, // set to true any move is allowed, if false only legal moves
-    color: 'white',
-    showDests: true,
-    events: {},
-    rookCastle: true,
-  },
-  premovable: {
-    enabled: true,
-    showDests: true,
-    castle: true,
-    events: {},
-  },
-  predroppable: {
-    enabled: false,
-    events: {},
-  },
-  draggable: {
-    enabled: true,
-    distance: 3,
-    autoDistance: true,
-    showGhost: true,
-    deleteOnDropOff: false,
-  },
-  selectable: {
-    enabled: true,
-  },
-  events: {},
-  drawable: {
-    enabled: true,
-    visible: true,
-    defaultSnapToValidMove: true,
-    eraseOnClick: true,
-    shapes: [],
-    autoShapes: [],
-    brushes: {
-      green: { key: 'g', color: '#15781B', opacity: 1, lineWidth: 10 },
-      red: { key: 'r', color: '#882020', opacity: 1, lineWidth: 10 },
-      blue: { key: 'b', color: '#003088', opacity: 1, lineWidth: 10 },
-      yellow: { key: 'y', color: '#e68f00', opacity: 1, lineWidth: 10 },
-      paleBlue: { key: 'pb', color: '#003088', opacity: 0.4, lineWidth: 15 },
-      paleGreen: { key: 'pg', color: '#15781B', opacity: 0.4, lineWidth: 15 },
-      paleRed: { key: 'pr', color: '#882020', opacity: 0.4, lineWidth: 15 },
-      paleGrey: {
-        key: 'pgr',
-        color: '#4a4a4a',
-        opacity: 0.35,
-        lineWidth: 15,
-      },
-    },
-  },
-};
+function handleMove(moveEvent: MoveEvent) {
+  const game: GameStorageValues = GameStorageHandler.getCurrentGame();
+
+  if (isCorrectMove(game, moveEvent)) {
+    if (isComputerMove(game.currentMove)) {
+      game.currentMove += 1;
+      game.fen = boardAPI?.getFen() || '';
+
+      GameStorageHandler.updateCurrentGame(game);
+
+      boardAPI?.move(game.moves[game.currentMove] || '0');
+    } else {
+      game.currentMove += 1;
+      game.fen = boardAPI?.getFen() || '';
+
+      GameStorageHandler.updateCurrentGame(game);
+    }
+  } else {
+    undoLastMove();
+  }
+}
+
+function nextGame(): void {
+  const game: GameStorageValues = GameStorageHandler.getNextGame();
+  initializeGame(game);
+}
+
+function initializeBoard(api: BoardApi) {
+  boardAPI = api;
+  const gameValue: GameStorageValues = GameStorageHandler.getCurrentGame();
+  initializeGame(gameValue);
+}
+
+function initializeGame(game: GameStorageValues) {
+  boardConfig.fen = game.fen;
+  if (game.currentMove == 0) {
+    setTimeout(() => {
+      console.log(boardAPI?.move(game.moves[game.currentMove] || '0'));
+    }, 300);
+  }
+
+}
+
+function hint(): void {
+  const gameValue: GameStorageValues = GameStorageHandler.getCurrentGame();
+  const squareToHint: string | null = gameValue.moves[gameValue.currentMove]?.slice(0, 2) || null;
+
+  if (squareToHint != null) {
+    const square: Square = squareToHint;
+    boardAPI?.drawMove(square, square, 'green');
+  }
+}
+
+function isCorrectMove(gameValue: GameStorageValues, moveEvent: MoveEvent): boolean {
+  return gameValue.moves[gameValue.currentMove] === moveEvent.lan;
+}
+
+function isComputerMove(currentMove: number): boolean {
+  return currentMove % 2 === 1;
+}
+
+function undoLastMove() {
+  setTimeout(() => {
+    boardAPI?.undoLastMove();
+  }, 100);
+}
+
+// access the boardAPI in the onMounted hook
+onMounted(() => {
+  boardAPI?.setConfig(boardConfig);
+});
+
+function clearDatabase(): void {
+  GameStorageHandler.clear();
+}
 
 </script>
 
 <style scoped>
-/* You can add component-specific styles here */
 </style>
